@@ -18,8 +18,10 @@ This plugin can be used on roleplay servers to let players pay an entry fee (for
 {
   "MaximumPrice": 0,
   "TransferTollToOwner": false
+  "Valuta": "serverrewards"
 }
 ```
 
 * `MaximumPrice` - The maximum price that players can set on a button - set to 0 to disable
 * `TransferTollToOwner` - When set to true, any paid toll will be transferred to the owner of the button
+* `Valuta` - Set to either `serverrewards` or `economics`
