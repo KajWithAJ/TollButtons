@@ -1,3 +1,4 @@
+using System;
 using Oxide.Core;
 using Oxide.Core.Plugins;
 using System.Linq;
@@ -5,12 +6,12 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Oxide.Plugins {
-    [Info("Toll Buttons", "KajWithAJ", "0.0.7")]
+    [Info("Toll Buttons", "KajWithAJ", "0.2.0")]
     [Description("Make players pay toll to press a button using their RP points.")]
     class TollButtons : RustPlugin {
 
         [PluginReference]
-        private Plugin ServerRewards;
+        private readonly Plugin Economics, ServerRewards;
 
         private const string PermissionUse = "tollbuttons.use";
         private const string PermissionAdmin = "tollbuttons.admin";
@@ -43,6 +44,7 @@ namespace Oxide.Plugins {
             Puts("Creating a new configuration file");
             Config["TransferTollToOwner"] = false;
             Config["MaximumPrice"] = 0;
+            Config["Valuta"] = "serverrewards";
         }
 
         protected override void LoadDefaultMessages()
@@ -126,16 +128,16 @@ namespace Oxide.Plugins {
                 }
 
                 if (button.OwnerID != player.userID) {
-                    int balance = (int) ServerRewards?.Call("CheckPoints", player.userID);
-                    if (cost > balance) {
+                    string valuta = (string) Config["Valuta"];
+
+                    if (!TryPay(player, valuta, cost)) {
                         player.ChatMessage(string.Format(lang.GetMessage("InsufficientFunds", this, player.UserIDString), cost));
                         return true;
                     } else {
-                        ServerRewards?.Call("TakePoints", player.userID, cost);
                         player.ChatMessage(string.Format(lang.GetMessage("TollPaid", this, player.UserIDString), cost));
 
                         if ((bool) Config["TransferTollToOwner"] == true) {
-                            ServerRewards?.Call("AddPoints", button.OwnerID, cost);
+                            Transfer(button.OwnerID.ToString(), valuta, cost);
                         }
 
                         return null;
@@ -153,6 +155,62 @@ namespace Oxide.Plugins {
                 return 0;
             } else {
                 return storedData.TollButtons[button.net.ID].cost;
+            }
+        }
+
+        private void Transfer(string beneficiary, string valuta, int amount) {
+            switch (valuta.ToLower()) {
+                case "economics":
+                    Economics?.Call("Deposit", beneficiary, (double)amount);
+                    break;
+
+                case "serverrewards":
+                    ServerRewards?.Call("AddPoints", beneficiary, amount);
+                    break;
+            }
+        }
+
+        private bool TryPay(BasePlayer player, string valuta, int price) {
+            if (!CanPay(player, valuta, price)) {
+                return false;
+            }
+
+            switch (valuta.ToLower()) {
+                case "economics":
+                    Economics?.Call("Withdraw", player.userID, (double)price);
+                    break;
+
+                case "serverrewards":
+                    ServerRewards?.Call("TakePoints", player.userID, price);
+                    break;
+            }
+            return true;
+        }
+
+        private bool CanPay(BasePlayer player, string valuta, int cost) {
+            int missingAmount = CheckBalance(valuta, cost, player.userID);
+            return missingAmount <= 0;
+        }
+
+        private int CheckBalance(string valuta, int price, ulong playerId) {
+            switch (valuta.ToLower()) {
+                case "serverrewards":
+                    var points = ServerRewards?.Call("CheckPoints", playerId);
+                    if (points is int) {
+                        var n = price - (int)points;
+                        return n <= 0 ? 0 : n;
+                    }
+                    return price;
+                case "economics":
+                    var balance = Economics?.Call("Balance", playerId);
+                    if (balance is double){
+                        var n = price - (double)balance;
+                        return n <= 0 ? 0 : (int)Math.Ceiling(n);
+                    }
+                    return price;
+                default:
+                    PrintError($"Valuta {valuta} not recognized.");
+                    return price;
             }
         }
 
