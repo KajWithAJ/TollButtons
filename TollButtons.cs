@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Oxide.Plugins {
-    [Info("Toll Buttons", "KajWithAJ", "0.2.0")]
+    [Info("Toll Buttons", "KajWithAJ", "0.2.1")]
     [Description("Make players pay toll to press a button using their RP points.")]
     class TollButtons : RustPlugin {
 
@@ -26,8 +26,8 @@ namespace Oxide.Plugins {
         }
 
         private void OnServerInitialized() {
-            if (ServerRewards == null) {
-                PrintError("ServerRewards is not loaded");
+            if (ServerRewards == null && Economics == null) {
+                PrintError("ServerRewards nor Economics are loaded, at least one of those is required");
             }
 
             SaveConfig();
