@@ -6,7 +6,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 namespace Oxide.Plugins {
-    [Info("Toll Buttons", "KajWithAJ", "0.2.1")]
+    [Info("Toll Buttons", "KajWithAJ", "0.3.0")]
     [Description("Make players pay toll to press a button using their RP points.")]
     class TollButtons : RustPlugin {
 
@@ -100,13 +100,13 @@ namespace Oxide.Plugins {
                     return;
                 }
 
-                if (!storedData.TollButtons.ContainsKey(button.net.ID)) {
+                if (!storedData.TollButtons.ContainsKey(button.net.ID.Value)) {
                     ButtonData buttonData = new ButtonData();
                     buttonData.cost = cost;
                     buttonData.ownerID = player.UserIDString;
-                    storedData.TollButtons.Add(button.net.ID, buttonData);
+                    storedData.TollButtons.Add(button.net.ID.Value, buttonData);
                 } else {
-                    storedData.TollButtons[button.net.ID].cost = cost;
+                    storedData.TollButtons[button.net.ID.Value].cost = cost;
                 }
 
                 player.ChatMessage(string.Format(lang.GetMessage("TollSet", this, player.UserIDString), cost));
@@ -151,10 +151,10 @@ namespace Oxide.Plugins {
         }
 
         private int CheckButtonCost(PressButton button) {
-            if (!storedData.TollButtons.ContainsKey(button.net.ID)) {
+            if (!storedData.TollButtons.ContainsKey(button.net.ID.Value)) {
                 return 0;
             } else {
-                return storedData.TollButtons[button.net.ID].cost;
+                return storedData.TollButtons[button.net.ID.Value].cost;
             }
         }
 
@@ -216,7 +216,7 @@ namespace Oxide.Plugins {
 
         private class StoredData
         {
-            public readonly Dictionary<uint, ButtonData> TollButtons = new Dictionary<uint, ButtonData>();
+            public readonly Dictionary<ulong, ButtonData> TollButtons = new Dictionary<ulong, ButtonData>();
         }
 
         private class ButtonData
